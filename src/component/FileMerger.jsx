@@ -1,14 +1,19 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import toast from "react-hot-toast";
 
 function FileMerger() {
+  const fileInputRef = useRef(null);
   const [files, setFiles] = useState([]);
   const [skipLines, setSkipLines] = useState(0);
   const [mergedData, setMergedData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loading1, setLoading1] = useState(false);
+  const [active, setActive] = useState(false);
   const handleFileChange = (e) => {
+    setActive(false);
+
     const uploadedFiles = [...e.target.files];
     setFiles(uploadedFiles);
 
@@ -68,6 +73,9 @@ function FileMerger() {
   };
 
   const handleMerge = async () => {
+    if (files.length === 0) return toast.error("please select files");
+    setActive(true);
+
     setLoading(true);
 
     let allData = [];
@@ -87,11 +95,17 @@ function FileMerger() {
     );
 
     setMergedData(allData);
-    setFiles([]);
+    setFiles([]); // Clear the files in state
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Step 2: Clear the input field using the ref
+    }
     setLoading(false);
   };
 
   const handleDownload = () => {
+    if (!active) return toast.error("select files");
+    setLoading1(true);
     const newWorkbook = XLSX.utils.book_new();
     const newWorksheet = XLSX.utils.json_to_sheet(mergedData);
     XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, "MergedData");
@@ -102,6 +116,7 @@ function FileMerger() {
     const fileName = `MergedData_${timestamp}_${randomNum}.xlsx`;
 
     XLSX.writeFile(newWorkbook, fileName);
+    setLoading1(false);
   };
 
   return (
@@ -114,6 +129,7 @@ function FileMerger() {
         multiple
         onChange={handleFileChange}
         className="border p-1 w-full"
+        ref={fileInputRef}
       />
       <div>
         <label htmlFor="skipLines">
@@ -138,10 +154,11 @@ function FileMerger() {
       </button>
       <button
         onClick={handleDownload}
-        disabled={!mergedData}
-        className="border border-black font-bold  px-3 py-1 bg-green-400 text-white rounded-lg"
+        className={`border border-black font-bold  px-3 py-1 text-white rounded-lg    ${
+          active ? " bg-green-400" : "bg-gray-400"
+        }`}
       >
-        Download Merged File
+        {loading1 ? "loading ..." : "Download Merged File"}
       </button>
     </div>
   );
