@@ -1,6 +1,5 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import Papa from "papaparse";
 import toast from "react-hot-toast";
 
 function FileMerger() {
@@ -34,34 +33,28 @@ function FileMerger() {
 
       reader.onload = (e) => {
         const data = e.target.result;
+        let parsedData;
 
         if (extension === "csv") {
-          Papa.parse(data, {
-            header: false, // Do not treat the first row as headers
-            skipEmptyLines: true,
-            complete: (results) => {
-              // Skip specified lines; include every row
-              const dataWithHeaders =
-                skipLines > 0 ? results.data.slice(skipLines) : results.data;
-              resolve(dataWithHeaders);
-            },
-          });
+          parsedData = XLSX.read(data, { type: "binary", cellDates: true });
         } else if (extension === "xls" || extension === "xlsx") {
-          const workbook = XLSX.read(data, { type: "binary" });
-          const sheetName = workbook.SheetNames[0];
-          const sheetData = XLSX.utils.sheet_to_json(
-            workbook.Sheets[sheetName],
-            { header: 1 }
-          );
-
-          // Skip specified lines; include every row
-          const dataWithHeaders =
-            skipLines > 0 ? sheetData.slice(skipLines) : sheetData;
-
-          resolve(dataWithHeaders);
+          parsedData = XLSX.read(data, { type: "binary", cellDates: true });
         } else {
           reject(new Error("Unsupported file format"));
+          return;
         }
+
+        const sheetName = parsedData.SheetNames[0];
+        const sheet = parsedData.Sheets[sheetName];
+
+        // Use `header: 1` to include all rows as arrays and skip specified lines
+        const sheetData = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          raw: true,
+        });
+        const dataWithHeaders =
+          skipLines > 0 ? sheetData.slice(skipLines) : sheetData;
+        resolve(dataWithHeaders);
       };
 
       if (extension === "csv") {
@@ -71,7 +64,6 @@ function FileMerger() {
       }
     });
   };
-
   const handleMerge = async () => {
     if (files.length === 0) return toast.error("please select files");
     setActive(true);
@@ -79,13 +71,18 @@ function FileMerger() {
     setLoading(true);
 
     let allData = [];
+    let isFirstFile = true;
 
     for (const file of files) {
-      // Read each file's data and keep headers intact
       const data = await readFile(file, skipLines);
 
-      // Append each file's data (with headers) to allData
-      allData = allData.concat(data);
+      // If we're not on the first file, add data without an extra empty row
+      if (!isFirstFile && data.length > 0) {
+        allData = allData.concat(data);
+      } else {
+        allData = data;
+        isFirstFile = false; // After the first file, set flag to false
+      }
     }
 
     setMergedData(allData);
@@ -96,7 +93,7 @@ function FileMerger() {
 
     setMergedData(allData);
     setFiles([]); // Clear the files in state
-
+    setSkipLines(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = ""; // Step 2: Clear the input field using the ref
     }
@@ -105,22 +102,21 @@ function FileMerger() {
 
   const handleDownload = () => {
     if (!active) return toast.error("select files");
+
     setLoading1(true);
     const newWorkbook = XLSX.utils.book_new();
-    const newWorksheet = XLSX.utils.json_to_sheet(mergedData);
+    const newWorksheet = XLSX.utils.aoa_to_sheet(mergedData); // Preserves format
     XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, "MergedData");
 
-    // Generate a random number or timestamp for unique filenames
-    const randomNum = Math.floor(Math.random() * 10000); // Random 4-digit number
-    const timestamp = Date.now(); // Alternatively, use timestamp for uniqueness
-    const fileName = `MergedData_${timestamp}_${randomNum}.xlsx`;
-
-    XLSX.writeFile(newWorkbook, fileName);
+    // Generate a filename with a random number for uniqueness
+    const randomNum = Math.floor(Math.random() * 10000);
+    XLSX.writeFile(newWorkbook, `MergedData_${randomNum}.xlsx`);
+    toast.success("Your download will begin shortly.");
     setLoading1(false);
   };
 
   return (
-    <div className="max-w-lg w-full flex flex-col border border-black p-5 mx-auto gap-8 ">
+    <div className="max-w-lg w-full flex flex-col border border-blue-700 p-5 mx-auto gap-8 rounded-xl py-10 ">
       <h2 className="text-xl font-bold font-sans uppercase bg-black text-white inline p-2 rounded-2xl text-center">
         File Merger
       </h2>
