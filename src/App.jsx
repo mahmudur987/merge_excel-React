@@ -1,22 +1,22 @@
-import { Toaster } from "react-hot-toast";
-import FileMerger from "./component/FileMerger";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Home from "./pages/Home/Home";
+import MainLayout from "./Layouts/MainLayout";
+import HeaderLess from "./pages/HeaderLess/HeaderLess";
+import Duplicate from "./pages/Duplicate/Duplicate";
+import LargeFiles from "./pages/LargeFiles/LargeFiles";
 
 function App() {
   return (
-    <main className="bg-black">
-      <section className="container bg-purple-300 min-h-screen mx-auto">
-        <header>
-          <h1 className="text-3xl text-center uppercase font-bold py-10">
-            You can merge Your csv , xls, xlsx files here
-          </h1>
-
-          <div>
-            <FileMerger />
-          </div>
-        </header>
-      </section>
-      <Toaster />
-    </main>
+    <Router>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/headerLess" element={<HeaderLess />} />
+          <Route path="/duplicates" element={<Duplicate />} />
+          <Route path="/largeFiles" element={<LargeFiles />} />
+        </Route>
+      </Routes>
+    </Router>
   );
 }
 
