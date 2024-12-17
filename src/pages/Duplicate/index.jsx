@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import * as XLSX from "xlsx";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 const DuplicateContentChecker = () => {
   const [files, setFiles] = useState([]);
@@ -7,7 +9,6 @@ const DuplicateContentChecker = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Function to compare file contents
   const areSheetsEqual = (sheet1, sheet2) => {
     return JSON.stringify(sheet1) === JSON.stringify(sheet2);
   };
@@ -29,7 +30,6 @@ const DuplicateContentChecker = () => {
     const fileData = [];
     const duplicates = [];
 
-    // Process each file
     for (const file of selectedFiles) {
       try {
         const data = await file.arrayBuffer();
@@ -38,27 +38,28 @@ const DuplicateContentChecker = () => {
         const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
         fileData.push({
+          file,
           fileName: file.name,
           sheetData,
         });
       } catch (err) {
+        console.error(err);
         setError(`Failed to read file: ${file.name}`);
         setLoading(false);
         return;
       }
     }
 
-    // Compare contents for duplicates
     const visited = new Set();
     for (let i = 0; i < fileData.length; i++) {
       if (visited.has(i)) continue;
 
-      const duplicatesForFile = [fileData[i].fileName];
+      const duplicatesForFile = [fileData[i]];
       for (let j = i + 1; j < fileData.length; j++) {
         if (visited.has(j)) continue;
 
         if (areSheetsEqual(fileData[i].sheetData, fileData[j].sheetData)) {
-          duplicatesForFile.push(fileData[j].fileName);
+          duplicatesForFile.push(fileData[j]);
           visited.add(j);
         }
       }
@@ -73,6 +74,31 @@ const DuplicateContentChecker = () => {
     setDuplicateGroups(duplicates);
     setFiles(selectedFiles);
     setLoading(false);
+  };
+
+  const downloadFolders = () => {
+    const zip = new JSZip();
+    const duplicatesFolder = zip.folder("Duplicates");
+    const nonDuplicatesFolder = zip.folder("Non-Duplicates");
+
+    const duplicateFileNames = new Set(
+      duplicateGroups.flatMap((group) => group.map((file) => file.fileName))
+    );
+
+    files.forEach((file) => {
+      const isDuplicate = duplicateFileNames.has(file.name);
+
+      const folder = isDuplicate ? duplicatesFolder : nonDuplicatesFolder;
+
+      folder.file(file.name, file);
+    });
+
+    zip
+      .generateAsync({ type: "blob" })
+      .then((content) => {
+        saveAs(content, "File_Checker_Result.zip");
+      })
+      .catch((err) => setError("Error generating ZIP file."));
   };
 
   return (
@@ -112,7 +138,9 @@ const DuplicateContentChecker = () => {
           <h3 className="font-semibold">Duplicate Files (Content):</h3>
           <ul>
             {duplicateGroups.map((group, index) => (
-              <li key={index}>{group.join(", ")}</li>
+              <li key={index}>
+                {group.map((file) => file.fileName).join(", ")}
+              </li>
             ))}
           </ul>
         </div>
@@ -123,6 +151,15 @@ const DuplicateContentChecker = () => {
             <p>No duplicate content found!</p>
           </div>
         )
+      )}
+
+      {files.length > 0 && !loading && (
+        <button
+          onClick={downloadFolders}
+          className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+        >
+          Download Duplicate & Non-Duplicate Files
+        </button>
       )}
     </div>
   );
