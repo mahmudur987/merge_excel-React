@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Excel Reseller MSISDN Filter</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 20px;
+      }
+      #output {
+        margin-top: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+      }
+      th {
+        background-color: #f4f4f4;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Upload Excel File</h2>
+    <input type="file" id="fileInput" accept=".xlsx" />
+    <button onclick="processFile()">Filter Data</button>
+    <button
+      id="downloadBtn"
+      style="display: none"
+      onclick="downloadFilteredData()"
+    >
+      Download Filtered Data
+    </button>
+    <div id="output"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+      const targetMSISDNs = [
+        "1708257676",
+        "1321263110",
+        "1315757457",
+        "1321256750",
+        "1324756661",
+        "1324759095",
+        "1324747888",
+        "1324747887",
+        "1321251611",
+        "1321238004",
+        "1321264823",
+        "1324750864",
+        "1321264444",
+        "1324750578",
+        "1321247675",
+        "1324774211",
+        "1324774945",
+        "1324759938",
+        "1321272204",
+        "1708287012",
+        "1708298330",
+        "1324774966",
+        "1708298328",
+      ];
+      let filteredData = [];
+
+      function processFile() {
+        const fileInput = document.getElementById("fileInput").files[0];
+        if (!fileInput) {
+          alert("Please upload an Excel file.");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsArrayBuffer(fileInput);
+        reader.onload = function (e) {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+          if (!jsonData[0]["Reseller MSISDN"]) {
+            alert("Column 'Reseller MSISDN' not found.");
+            return;
+          }
+
+          filteredData = jsonData.filter((row) =>
+            targetMSISDNs.includes(String(row["Reseller MSISDN"]))
+          );
+          displayData(filteredData);
+        };
+      }
+
+      function displayData(data) {
+        const outputDiv = document.getElementById("output");
+        const downloadBtn = document.getElementById("downloadBtn");
+
+        if (data.length === 0) {
+          outputDiv.innerHTML = "<p>No matching records found.</p>";
+          downloadBtn.style.display = "none";
+          return;
+        }
+
+        let table = "<table><tr>";
+        Object.keys(data[0]).forEach((key) => {
+          table += `<th>${key}</th>`;
+        });
+        table += "</tr>";
+
+        data.forEach((row) => {
+          table += "<tr>";
+          Object.values(row).forEach((value) => {
+            table += `<td>${value}</td>`;
+          });
+          table += "</tr>";
+        });
+        table += "</table>";
+        outputDiv.innerHTML = table;
+
+        downloadBtn.style.display = "inline-block";
+      }
+
+      function downloadFilteredData() {
+        if (filteredData.length === 0) return;
+
+        const ws = XLSX.utils.json_to_sheet(filteredData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Filtered Data");
+        XLSX.writeFile(wb, "Filtered_Reseller_MSISDN.xlsx");
+      }
+    </script>
+  </body>
+</html>
