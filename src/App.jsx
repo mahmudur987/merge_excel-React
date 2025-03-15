@@ -1,5 +1,6 @@
 import { Toaster } from "react-hot-toast";
 import FileMerger from "./component/FileMerger";
+import GPO2CFILTER from "./component/GPO2CFILTER.JSX";
 
 function App() {
   return (
@@ -9,14 +10,16 @@ function App() {
           <h1 className="text-3xl text-center uppercase font-bold py-10">
             You can merge Your csv , xls, xlsx files here
           </h1>
-          <a
+          {/* <a
             href="../GPO2CFILTER.html"
             className="fixed top-5 right-20 font-semibold text-red-500"
           >
             GP O2C Filter
-          </a>
+          </a> */}
           <div>
             <FileMerger />
+
+            {/* <GPO2CFILTER /> */}
           </div>
         </header>
       </section>
