@@ -30,8 +30,11 @@ let menuItems = (
     <li>
       <Link to={"/duplicates"}>CheckDuplicates</Link>
     </li>
-    <li>
+    {/* <li>
       <Link to={"/largeFiles"}>LargeFiles</Link>
+    </li> */}
+    <li>
+      <Link to={"/gpO2CFilter"}>GP O2C Filter</Link>
     </li>
   </>
 );
