@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 
-function FileMerger() {
+const FileMerger = () => {
   const fileInputRef = useRef(null);
   const [files, setFiles] = useState([]);
   const [skipLines, setSkipLines] = useState(0);
@@ -10,9 +10,9 @@ function FileMerger() {
   const [loading, setLoading] = useState(false);
   const [loading1, setLoading1] = useState(false);
   const [active, setActive] = useState(false);
+
   const handleFileChange = (e) => {
     setActive(false);
-
     const uploadedFiles = [...e.target.files];
     setFiles(uploadedFiles);
 
@@ -26,6 +26,7 @@ function FileMerger() {
   const handleSkipLinesChange = (e) => {
     setSkipLines(parseInt(e.target.value, 10));
   };
+
   const readFile = (file, skipLines) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -47,7 +48,6 @@ function FileMerger() {
         const sheetName = parsedData.SheetNames[0];
         const sheet = parsedData.Sheets[sheetName];
 
-        // Use `header: 1` to include all rows as arrays and skip specified lines
         const sheetData = XLSX.utils.sheet_to_json(sheet, {
           header: 1,
           raw: true,
@@ -64,10 +64,10 @@ function FileMerger() {
       }
     });
   };
-  const handleMerge = async () => {
-    if (files.length === 0) return toast.error("please select files");
-    setActive(true);
 
+  const handleMerge = async () => {
+    if (files.length === 0) return toast.error("Please select files");
+    setActive(true);
     setLoading(true);
 
     let allData = [];
@@ -76,12 +76,11 @@ function FileMerger() {
     for (const file of files) {
       const data = await readFile(file, skipLines);
 
-      // If we're not on the first file, add data without an extra empty row
       if (!isFirstFile && data.length > 0) {
         allData = allData.concat(data);
       } else {
         allData = data;
-        isFirstFile = false; // After the first file, set flag to false
+        isFirstFile = false;
       }
     }
 
@@ -91,32 +90,39 @@ function FileMerger() {
       "File merge successful! Your merged file is ready for download."
     );
 
-    setMergedData(allData);
-    setFiles([]); // Clear the files in state
+    setFiles([]);
     setSkipLines(0);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // Step 2: Clear the input field using the ref
+      fileInputRef.current.value = "";
     }
     setLoading(false);
   };
 
-  const handleDownload = () => {
-    if (!active) return toast.error("select files");
+  const handleDownload = async () => {
+    if (!active) return toast.error("Please select files");
 
     setLoading1(true);
-    const newWorkbook = XLSX.utils.book_new();
-    const newWorksheet = XLSX.utils.aoa_to_sheet(mergedData); // Preserves format
-    XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, "MergedData");
 
-    // Generate a filename with a random number for uniqueness
-    const randomNum = Math.floor(Math.random() * 10000);
-    XLSX.writeFile(newWorkbook, `MergedData_${randomNum}.xlsx`);
-    toast.success("Your download will begin shortly.");
-    setLoading1(false);
+    setTimeout(() => {
+      try {
+        const newWorkbook = XLSX.utils.book_new();
+        const newWorksheet = XLSX.utils.aoa_to_sheet(mergedData);
+        XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, "MergedData");
+
+        const randomNum = Math.floor(Math.random() * 10000);
+        XLSX.writeFile(newWorkbook, `MergedData_${randomNum}.xlsx`);
+        toast.success("Download complete!");
+      } catch (error) {
+        toast.error("An error occurred during the download.");
+        console.error(error);
+      } finally {
+        setLoading1(false);
+      }
+    }, 100); // Small delay to allow the UI to update
   };
 
   return (
-    <div className="max-w-lg w-full flex flex-col border border-blue-700 p-5 mx-auto gap-8 rounded-xl py-10 ">
+    <div className="max-w-lg w-full flex flex-col border border-blue-700 p-5 mx-auto gap-8 rounded-xl py-10">
       <h2 className="text-xl font-bold font-sans uppercase bg-black text-white inline p-2 rounded-2xl text-center">
         File Merger
       </h2>
@@ -144,20 +150,20 @@ function FileMerger() {
       </div>
       <button
         onClick={handleMerge}
-        className="border border-black font-bold  px-3 py-1 bg-red-400 text-white rounded-lg"
+        className="border border-black font-bold px-3 py-1 bg-red-400 text-white rounded-lg"
       >
-        {loading ? "loading  ..." : "Merge Files"}
+        {loading ? "Loading..." : "Merge Files"}
       </button>
       <button
         onClick={handleDownload}
-        className={`border border-black font-bold  px-3 py-1 text-white rounded-lg    ${
-          active ? " bg-green-400" : "bg-gray-400"
+        className={`border border-black font-bold px-3 py-1 text-white rounded-lg ${
+          active ? "bg-green-400" : "bg-gray-400"
         }`}
       >
-        {loading1 ? "loading ..." : "Download Merged File"}
+        {loading1 ? "Preparing Download..." : "Download Merged File"}
       </button>
     </div>
   );
-}
+};
 
 export default FileMerger;

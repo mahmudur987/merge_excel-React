@@ -71,6 +71,7 @@ export default function ExcelFilter() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Filtered Data");
     XLSX.writeFile(wb, "Filtered_Reseller_MSISDN.xlsx");
+    setFilteredData([]);
   };
 
   return (
@@ -92,6 +93,9 @@ export default function ExcelFilter() {
         </button>
       )}
       <div className="mt-4">
+        <h2 className="text-lg font-bold">
+          Total data {filteredData.length ? filteredData.length : 0}
+        </h2>
         {filteredData.length > 0 ? (
           <table className="border-collapse border w-full mt-4">
             <thead>
