@@ -71,30 +71,48 @@ const FileMerger = () => {
     setLoading(true);
 
     let allData = [];
-    let isFirstFile = true;
+    let failedFiles = [];
 
     for (const file of files) {
-      const data = await readFile(file, skipLines);
+      try {
+        const data = await readFile(file, skipLines);
 
-      if (!isFirstFile && data.length > 0) {
-        allData = allData.concat(data);
-      } else {
-        allData = data;
-        isFirstFile = false;
+        if (data.length > 0) {
+          allData = allData.concat(data); // Append everything after skipping rows
+        } else {
+          failedFiles.push(file.name);
+        }
+      } catch (error) {
+        console.error(`Failed to process ${file.name}:`, error);
+        failedFiles.push(file.name);
       }
+    }
+
+    if (failedFiles.length > 0) {
+      toast.error(
+        `${failedFiles.length} file(s) failed: ${failedFiles.join(", ")}`
+      );
+    }
+
+    if (allData.length === 0) {
+      toast.error(
+        "No data could be merged. Check file formats or skipped rows."
+      );
+      setLoading(false);
+      return;
     }
 
     setMergedData(allData);
 
     toast.success(
-      "File merge successful! Your merged file is ready for download."
+      `File merge successful! Merged ${
+        files.length - failedFiles.length
+      } file(s).`
     );
 
     setFiles([]);
     setSkipLines(0);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setLoading(false);
   };
 
